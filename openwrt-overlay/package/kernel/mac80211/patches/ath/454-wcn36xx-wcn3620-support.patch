@@ -32,7 +32,7 @@ Signed-off-by: Stephan Gerhold <stephan@gerhold.net>
  	ieee80211_hw_set(wcn->hw, SINGLE_SCAN_ON_ALL_BANDS);
 --- a/drivers/net/wireless/ath/wcn36xx/smd.c
 +++ b/drivers/net/wireless/ath/wcn36xx/smd.c
-@@ -120,6 +120,38 @@ static struct wcn36xx_cfg_val wcn3680_cf
+@@ -120,6 +120,41 @@ static struct wcn36xx_cfg_val wcn3680_cf
  	WCN36XX_CFG_VAL(FRAME_TRANS_ENABLED, 0),
  };
  
@@ -105,7 +105,7 @@ Signed-off-by: Stephan Gerhold <stephan@gerhold.net>
  
 --- a/drivers/net/wireless/ath/wcn36xx/txrx.c
 +++ b/drivers/net/wireless/ath/wcn36xx/txrx.c
-@@ -367,7 +367,12 @@ int wcn36xx_rx_skb(struct wcn36xx *wcn,
+@@ -367,7 +367,11 @@ int wcn36xx_rx_skb(struct wcn36xx *wcn,
  		 */
  		u8 hwch = (bd->reserved0 << 4) + bd->rx_ch;
  
