@@ -1,0 +1,120 @@
+From: Andy Green <andy.green@linaro.org>
+Subject: [PATCH] wcn36xx: add comprehensive WCN3620 support and stability fixes
+
+Addresses WCN3620 2.4 GHz Wi-Fi chip incompatibilities on Qualcomm MSM8916:
+- Disable BMPS power saving on WCN3620 (firmware rejects STA_POWERSAVE/BMPS)
+- Supply 2.4 GHz specific config values and default rate index
+- Handle async indication 233 (WCN36XX_HAL_AVOID_FREQ_RANGE_IND) and 129 (COEX)
+- Handle trigger_ba responses with 0 candidates gracefully
+- Suppress bogus 5 GHz scan packets on WCN3620 (rf_band=0 bug)
+
+Signed-off-by: Andy Green <andy.green@linaro.org>
+Signed-off-by: Stephan Gerhold <stephan@gerhold.net>
+---
+ drivers/net/wireless/ath/wcn36xx/main.c |  5 +++++
+ drivers/net/wireless/ath/wcn36xx/smd.c  | 42 +++++++++++++++++++++++++++++++++++++++---
+ drivers/net/wireless/ath/wcn36xx/txrx.c |  7 ++++++-
+ 3 files changed, 50 insertions(+), 4 deletions(-)
+
+--- a/drivers/net/wireless/ath/wcn36xx/main.c
++++ b/drivers/net/wireless/ath/wcn36xx/main.c
+@@ -1428,6 +1428,11 @@ static int wcn36xx_init_ieee80211(struct
+ 	ieee80211_hw_set(wcn->hw, TIMING_BEACON_ONLY);
+ 	ieee80211_hw_set(wcn->hw, AMPDU_AGGREGATION);
+ 	ieee80211_hw_set(wcn->hw, SUPPORTS_PS);
++
++	/* WCN3620 firmware power saving is unstable and triggers BMPS timeout */
++	if (wcn->rf_id == RF_IRIS_WCN3620)
++		ieee80211_hw_clear(wcn->hw, SUPPORTS_PS);
++
+ 	ieee80211_hw_set(wcn->hw, SIGNAL_DBM);
+ 	ieee80211_hw_set(wcn->hw, HAS_RATE_CONTROL);
+ 	ieee80211_hw_set(wcn->hw, SINGLE_SCAN_ON_ALL_BANDS);
+--- a/drivers/net/wireless/ath/wcn36xx/smd.c
++++ b/drivers/net/wireless/ath/wcn36xx/smd.c
+@@ -120,6 +120,41 @@ static struct wcn36xx_cfg_val wcn3680_cf
+ 	WCN36XX_CFG_VAL(FRAME_TRANS_ENABLED, 0),
+ };
+ 
++static struct wcn36xx_cfg_val wcn3620_cfg_vals[] = {
++	WCN36XX_CFG_VAL(CURRENT_TX_ANTENNA, 1),
++	WCN36XX_CFG_VAL(CURRENT_RX_ANTENNA, 1),
++	WCN36XX_CFG_VAL(LOW_GAIN_OVERRIDE, 0),
++	WCN36XX_CFG_VAL(POWER_STATE_PER_CHAIN, 785),
++	WCN36XX_CFG_VAL(CAL_PERIOD, 5),
++	WCN36XX_CFG_VAL(CAL_CONTROL, 1),
++	WCN36XX_CFG_VAL(PROXIMITY, 0),
++	WCN36XX_CFG_VAL(NETWORK_DENSITY, 3),
++	WCN36XX_CFG_VAL(MAX_MEDIUM_TIME, 4096),
++	WCN36XX_CFG_VAL(MAX_MPDUS_IN_AMPDU, 64),
++	WCN36XX_CFG_VAL(RTS_THRESHOLD, 2347),
++	WCN36XX_CFG_VAL(SHORT_RETRY_LIMIT, 15),
++	WCN36XX_CFG_VAL(LONG_RETRY_LIMIT, 15),
++	WCN36XX_CFG_VAL(FRAGMENTATION_THRESHOLD, 8000),
++	WCN36XX_CFG_VAL(DYNAMIC_THRESHOLD_ZERO, 5),
++	WCN36XX_CFG_VAL(DYNAMIC_THRESHOLD_ONE, 10),
++	WCN36XX_CFG_VAL(DYNAMIC_THRESHOLD_TWO, 15),
++	WCN36XX_CFG_VAL(FIXED_RATE, 0),
++	WCN36XX_CFG_VAL(RETRYRATE_POLICY, 4),
++	WCN36XX_CFG_VAL(RETRYRATE_SECONDARY, 0),
++	WCN36XX_CFG_VAL(RETRYRATE_TERTIARY, 0),
++	WCN36XX_CFG_VAL(FORCE_POLICY_PROTECTION, 5),
++	WCN36XX_CFG_VAL(FIXED_RATE_MULTICAST_24GHZ, 1),
++	WCN36XX_CFG_VAL(DEFAULT_RATE_INDEX_24GHZ, 1),
++	WCN36XX_CFG_VAL(MAX_BA_SESSIONS, 40),
++	WCN36XX_CFG_VAL(PS_DATA_INACTIVITY_TIMEOUT, 200),
++	WCN36XX_CFG_VAL(PS_ENABLE_BCN_FILTER, 1),
++	WCN36XX_CFG_VAL(PS_ENABLE_RSSI_MONITOR, 1),
++	WCN36XX_CFG_VAL(NUM_BEACON_PER_RSSI_AVERAGE, 20),
++	WCN36XX_CFG_VAL(STATS_PERIOD, 10),
++	WCN36XX_CFG_VAL(CFP_MAX_DURATION, 30000),
++	WCN36XX_CFG_VAL(FRAME_TRANS_ENABLED, 0),
++};
++
+ int wcn36xx_smd_open(struct wcn36xx *wcn)
+ {
+ 	int ret;
+@@ -634,6 +666,9 @@ int wcn36xx_smd_start(struct wcn36xx *wc
+ 	if (wcn->rf_id == RF_IRIS_WCN3680) {
+ 		cfg_vals = wcn3680_cfg_vals;
+ 		cfg_elements = ARRAY_SIZE(wcn3680_cfg_vals);
++	} else if (wcn->rf_id == RF_IRIS_WCN3620) {
++		cfg_vals = wcn3620_cfg_vals;
++		cfg_elements = ARRAY_SIZE(wcn3620_cfg_vals);
+ 	} else {
+ 		cfg_vals = wcn36xx_cfg_vals;
+ 		cfg_elements = ARRAY_SIZE(wcn36xx_cfg_vals);
+@@ -2440,7 +2475,8 @@ int wcn36xx_smd_feature_caps_exchange(st
+ 	mutex_lock(&wcn->hal_mutex);
+ 	INIT_HAL_MSG(msg_body, WCN36XX_HAL_FEATURE_CAPS_EXCHANGE_REQ);
+ 
+-	wcn36xx_firmware_set_feat_caps(msg_body.feat_caps, STA_POWERSAVE);
++	if (wcn->rf_id != RF_IRIS_WCN3620)
++		wcn36xx_firmware_set_feat_caps(msg_body.feat_caps, STA_POWERSAVE);
+ 	if (wcn->rf_id == RF_IRIS_WCN3680) {
+ 		wcn36xx_firmware_set_feat_caps(msg_body.feat_caps, DOT11AC);
+ 		wcn36xx_firmware_set_feat_caps(msg_body.feat_caps, WLAN_CH144);
+@@ -2656,7 +2692,7 @@ static int wcn36xx_smd_trigger_ba_rsp(vo
+ 	rsp = buf;
+ 
+ 	if (rsp->candidate_cnt < 1)
+-		return rsp->status ? rsp->status : -EINVAL;
++		return rsp->status;
+ 
+ 	candidate = (struct wcn36xx_hal_trigger_ba_rsp_candidate *)(buf + sizeof(*rsp));
+ 
+--- a/drivers/net/wireless/ath/wcn36xx/txrx.c
++++ b/drivers/net/wireless/ath/wcn36xx/txrx.c
+@@ -367,7 +367,11 @@ int wcn36xx_rx_skb(struct wcn36xx *wcn,
+ 		 */
+ 		u8 hwch = (bd->reserved0 << 4) + bd->rx_ch;
+ 
+-		if (bd->rf_band != 1 && hwch <= sizeof(ab_rx_ch_map) && hwch >= 1) {
++		/* WCN3620 is 2.4 GHz only. Suppress bogus 5 GHz scan packets. */
++		if (wcn->rf_id != RF_IRIS_WCN3620 &&
++		    bd->rf_band != 1 &&
++		    hwch <= sizeof(ab_rx_ch_map) &&
++		    hwch >= 1) {
+ 			status.band = NL80211_BAND_5GHZ;
+ 			status.freq = ieee80211_channel_to_frequency(ab_rx_ch_map[hwch - 1],
+ 								     status.band);
