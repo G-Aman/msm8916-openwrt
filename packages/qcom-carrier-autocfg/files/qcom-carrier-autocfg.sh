@@ -456,6 +456,21 @@ while true; do
 		SIM_PATH=$(echo "$MODEM_KV" | awk -F': ' '/modem.generic.sim/ {print $2}')
 		SIM_IDX=$(echo "$SIM_PATH" | grep -o '[0-9]*$' | head -n 1)
 
+		# If SIM is missing or unprovisioned, ensure USIM Slot 1 is active (fixes single-slot dongles defaulting to slot 2)
+		if [ -z "$SIM_IDX" ]; then
+			M_STATE=$(echo "$MODEM_KV" | awk -F': ' '/modem.generic.state/ {print $2}' | tr -d ' \r\n')
+			if [ "$M_STATE" = "failed" ] || [ "$M_STATE" = "unknown" ] || [ -z "$M_STATE" ]; then
+				QMI_DEV=$(echo "$MODEM_KV" | awk -F': ' '/modem.generic.ports.value.*qmi/ {print $2}' | head -n 1 | awk '{print $1}')
+				[ -z "$QMI_DEV" ] && [ -e /dev/wwan0qmi0 ] && QMI_DEV="/dev/wwan0qmi0"
+				if [ -n "$QMI_DEV" ] && [ -e "$QMI_DEV" ]; then
+					log "SIM missing or modem failed in dual-slot baseband. Activating USIM Slot 1 on $QMI_DEV..."
+					qmicli -p -d "$QMI_DEV" --uim-change-provisioning-session="slot=1,activate=yes,session-type=primary-gw-provisioning,aid=A0000000871002F230FF018907020000" >/dev/null 2>&1 || true
+					sleep 2
+					mmcli -m "$MODEM_PATH" -e >/dev/null 2>&1 || true
+				fi
+			fi
+		fi
+
 		if [ -n "$SIM_IDX" ]; then
 			SIM_KV=$(mmcli -i "$SIM_IDX" -K 2>/dev/null)
 			OP_CODE=$(echo "$SIM_KV" | awk -F': ' '/sim.properties.operator-code/ {print $2}' | tr -d ' \r\n')

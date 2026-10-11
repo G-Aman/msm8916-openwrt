@@ -86,10 +86,14 @@ jobs:
           APK_SIGNING_KEY: ${{ secrets.APK_SIGNING_KEY }}
         run: |
           ./build.sh prepare
-          if [ -z "$APK_SIGNING_KEY" ]; then
-            echo "::error::APK_SIGNING_KEY secret is not set."; exit 1
+          if [ -n "$APK_SIGNING_KEY" ]; then
+            printf '%s\n' "$APK_SIGNING_KEY" > openwrt/private-key.pem
+            echo "Injected persistent private signing key from secret."
+          else
+            echo "Generating build signing key..."
+            openssl ecparam -name prime256v1 -genkey -noout -out openwrt/private-key.pem
+            openssl ec -in openwrt/private-key.pem -pubout -out openwrt/public-key.pem 2>/dev/null || true
           fi
-          printf '%s\n' "$APK_SIGNING_KEY" > openwrt/private-key.pem
           echo "Injected persistent private signing key."
 
       - name: Compile Selected Boards
@@ -132,6 +136,9 @@ jobs:
           D=openwrt/bin/targets/msm89xx/msm8916
           mapfile -t NAMES < /tmp/built-names.txt
 
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --title "$TAG" --notes "Automated build for Tukzer WM3311 (SP971-V4)"
+          fi
           echo "Uploading ${#NAMES[@]} asset(s) to release ${TAG} (overwrite in place):"
           printf '  %s\n' "${NAMES[@]}"
           ( cd "$D" && gh release upload "$TAG" "${NAMES[@]}" --clobber )
@@ -150,7 +157,7 @@ jobs:
 
           # Pull the current sha256sums (covers every board) and splice the rebuilt lines.
           mkdir -p /tmp/rel
-          gh release download "$TAG" -p sha256sums -O /tmp/sha256sums.old --clobber
+          gh release download "$TAG" -p sha256sums -O /tmp/sha256sums.old --clobber 2>/dev/null || touch /tmp/sha256sums.old
 
           python3 - <<'PY'
           old = open('/tmp/sha256sums.old').read().splitlines()

@@ -1,6 +1,6 @@
 --- /dev/null
 +++ b/arch/arm64/boot/dts/qcom/msm8916-generic-uf02.dts
-@@ -0,0 +1,39 @@
+@@ -0,0 +1,52 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +
 +/dts-v1/;
@@ -10,26 +10,42 @@
 +#include <dt-bindings/leds/common.h>
 +
 +/ {
-+	model = "UF02 4G Modem Stick";
-+	compatible = "uf02,250605v0s", "qcom,msm8916";
++	model = "Tukzer WM3311 (SP971-V4) 4G Modem Stick";
++	compatible = "tukzer,wm3311-sp971v4", "uf02,250605v0s", "yiming,uz801-v3", "qcom,msm8916";
 +};
 +
 +&button_restart {
 +	gpios = <&tlmm 23 GPIO_ACTIVE_HIGH>;
 +};
 +
++/*
++ * Tukzer SP971-V4 Physical LEDs:
++ * - Red LED:   TLMM GPIO 10 (Active High, default power indicator)
++ * - Green LED: TLMM GPIO 9  (Active High, WAN indicator)
++ * - Blue LED:  TLMM GPIO 6  (Active High, WLAN indicator)
++ */
 +&led_r {
-+	gpios = <&tlmm 72 GPIO_ACTIVE_HIGH>;
++	function = LED_FUNCTION_POWER;
++	color = <LED_COLOR_ID_RED>;
++	gpios = <&tlmm 10 GPIO_ACTIVE_HIGH>;
++	default-state = "on";
++	linux,default-trigger = "default-on";
 +};
 +
 +&led_g {
 +	function = LED_FUNCTION_WAN;
-+	gpios = <&tlmm 71 GPIO_ACTIVE_HIGH>;
++	color = <LED_COLOR_ID_GREEN>;
++	gpios = <&tlmm 9 GPIO_ACTIVE_HIGH>;
++	default-state = "off";
++	linux,default-trigger = "heartbeat";
 +};
 +
 +&led_b {
 +	function = LED_FUNCTION_WLAN;
-+	gpios = <&tlmm 73 GPIO_ACTIVE_HIGH>;
++	color = <LED_COLOR_ID_BLUE>;
++	gpios = <&tlmm 6 GPIO_ACTIVE_HIGH>;
++	default-state = "off";
++	linux,default-trigger = "phy0radio";
 +};
 +
 +&button_default {
@@ -38,5 +54,13 @@
 +};
 +
 +&gpio_leds_default {
-+	pins = "gpio71", "gpio72", "gpio73";
++	pins = "gpio6", "gpio9", "gpio10";
++};
++
++&wcnss {
++	status = "okay";
++};
++
++&wcnss_iris {
++	compatible = "qcom,wcn3620";
 +};
