@@ -1,15 +1,12 @@
 diff -uprN a/drivers/net/wireless/ath/wcn36xx/main.c b/drivers/net/wireless/ath/wcn36xx/main.c
 --- a/drivers/net/wireless/ath/wcn36xx/main.c	2026-10-11 23:39:07.469127959 +0530
 +++ b/drivers/net/wireless/ath/wcn36xx/main.c	2026-10-11 23:39:08.693199969 +0530
-@@ -1426,6 +1426,11 @@ static int wcn36xx_init_ieee80211(struct
+@@ -1426,6 +1426,7 @@ static int wcn36xx_init_ieee80211(struct
  	ieee80211_hw_set(wcn->hw, TIMING_BEACON_ONLY);
  	ieee80211_hw_set(wcn->hw, AMPDU_AGGREGATION);
- 	ieee80211_hw_set(wcn->hw, SUPPORTS_PS);
-+
-+	/* WCN3620 firmware power saving is unstable and triggers BMPS timeout */
-+	if (wcn->rf_id == RF_IRIS_WCN3620)
-+		ieee80211_hw_clear(wcn->hw, SUPPORTS_PS);
-+
+-	ieee80211_hw_set(wcn->hw, SUPPORTS_PS);
++	if (wcn->rf_id != RF_IRIS_WCN3620)
++		ieee80211_hw_set(wcn->hw, SUPPORTS_PS);
  	ieee80211_hw_set(wcn->hw, SIGNAL_DBM);
  	ieee80211_hw_set(wcn->hw, HAS_RATE_CONTROL);
  	ieee80211_hw_set(wcn->hw, SINGLE_SCAN_ON_ALL_BANDS);

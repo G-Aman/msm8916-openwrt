@@ -147,34 +147,37 @@ provision_network() {
 	local mode="$3"
 	local is_jio="${4:-0}"
 
-	local cur_apn cur_iptype cur_proto cur_allowed cur_preferred
+	local cur_apn cur_iptype cur_proto cur_allowed cur_preferred target_allowed target_preferred
 	cur_apn=$(uci -q get network.modem.apn || echo "")
 	cur_iptype=$(uci -q get network.modem.iptype || echo "")
 	cur_proto=$(uci -q get network.modem.proto || echo "")
+
+	# Respect user-configured modes from LuCI (/etc/config/network)
+	# Do NOT unconditionally overwrite allowedmode or preferredmode if the user has configured them.
 	cur_allowed=$(uci -q get network.modem.allowedmode || echo "")
 	cur_preferred=$(uci -q get network.modem.preferredmode || echo "")
-
-	local target_allowed target_preferred
-	if [ "$is_jio" = "1" ]; then
+	if [ -n "$cur_allowed" ]; then
+		target_allowed="$cur_allowed"
+		target_preferred="$cur_preferred"
+	elif [ "$is_jio" = "1" ]; then
 		target_allowed="4g"
 		target_preferred=""
 	else
-		# Non-Jio carriers: 4G preferred with 3G/2G fallback
-		target_allowed="3g|4g"
+		# Default for multi-mode carriers when unconfigured in LuCI
+		target_allowed="any"
 		target_preferred="4g"
 	fi
 
-	local cur_apn cur_iptype cur_proto cur_allowed cur_preferred cur_eps cur_dns
-	local target_eps="default"
+	local cur_eps cur_dns
+	local target_eps="none"
 	case "$(cat /tmp/sysinfo/board_name 2>/dev/null)" in
-		*hmu05*) target_eps="none" ;;
+		*hmu05*|*uf02*|*uz801*|*sp971*) target_eps="none" ;;
+		*) target_eps="none" ;;
 	esac
 
 	cur_apn=$(uci -q get network.modem.apn || echo "")
 	cur_iptype=$(uci -q get network.modem.iptype || echo "")
 	cur_proto=$(uci -q get network.modem.proto || echo "")
-	cur_allowed=$(uci -q get network.modem.allowedmode || echo "")
-	cur_preferred=$(uci -q get network.modem.preferredmode || echo "")
 	cur_eps=$(uci -q get network.modem.init_epsbearer || echo "none")
 	cur_dns=$(uci -q get network.modem.dns || echo "")
 
@@ -365,10 +368,11 @@ check_and_flush_radio_cache() {
 				;;
 		esac
 
-		# 6. Radio Mode check
-		local cur_modes
+		# 6. Radio Mode check: Respect user manual choice from LuCI (/etc/config/network)
+		local cached_uci_mode cur_modes
+		cached_uci_mode=$(uci -q get network.modem.allowedmode || echo "")
 		cur_modes=$(echo "$modem_kv" | awk -F': ' '/modem.generic.current-modes/ {print $2}')
-		if [ "$is_jio" = "0" ] && [ -n "$cur_modes" ]; then
+		if [ -z "$cached_uci_mode" ] && [ "$is_jio" = "0" ] && [ -n "$cur_modes" ]; then
 			if ! echo "$cur_modes" | grep -qi '3g'; then
 				log "Radio mode mismatch: '$carrier_name' requires 3G fallback, but radio cache lacks 3G"
 				need_flush=1
@@ -414,6 +418,7 @@ connect_bearer() {
 	local apn="$1"
 	local iptype="$2"
 	local imsi="$3"
+	local at_dev dev
 
 	# NOTE: there is deliberately NO QMI-time / ATS_USER gate here.
 	#
@@ -429,10 +434,21 @@ connect_bearer() {
 	# optional, HMU05-only extra.
 
 	(
-		flock -x 200
+		flock -x 9
 		log "Triggering netifd interface bring-up for modem (APN: '$apn', IP-Type: '$iptype')..."
+		# Configure baseband SMS routing to Packet Domain (LTE preferred) so SMS on 4G does not trigger 2G CSFB
+		at_dev=""
+		for dev in /dev/wwan0at0 /dev/wwan0at1; do
+			if [ -c "$dev" ]; then
+				at_dev="$dev"
+				break
+			fi
+		done
+		if [ -n "$at_dev" ]; then
+			printf "ATE0\r\nAT+CGSMS=3\r\n" > "$at_dev" 2>/dev/null || true
+		fi
 		ifup modem 2>/dev/null || true
-	) 200>/var/lock/modem-bearer.lock
+	) 9>/var/lock/modem-bearer.lock
 
 	if [ -n "$imsi" ]; then
 		mkdir -p /etc/qcom-carrier-autocfg 2>/dev/null || true
@@ -464,7 +480,9 @@ while true; do
 				[ -z "$QMI_DEV" ] && [ -e /dev/wwan0qmi0 ] && QMI_DEV="/dev/wwan0qmi0"
 				if [ -n "$QMI_DEV" ] && [ -e "$QMI_DEV" ]; then
 					log "SIM missing or modem failed in dual-slot baseband. Activating USIM Slot 1 on $QMI_DEV..."
-					qmicli -p -d "$QMI_DEV" --uim-change-provisioning-session="slot=1,activate=yes,session-type=primary-gw-provisioning,aid=A0000000871002F230FF018907020000" >/dev/null 2>&1 || true
+					# Use dynamic slot-1 activation without hardcoded foreign AID
+					qmicli -p -d "$QMI_DEV" --uim-change-provisioning-session="slot=1,activate=yes,session-type=primary-gw-provisioning" >/dev/null 2>&1 || \
+					qmicli -p -d "$QMI_DEV" --uim-change-provisioning-session="slot=1,activate=yes,session-type=primary-gw-provisioning,aid=A0000000871002" >/dev/null 2>&1 || true
 					sleep 2
 					mmcli -m "$MODEM_PATH" -e >/dev/null 2>&1 || true
 				fi
