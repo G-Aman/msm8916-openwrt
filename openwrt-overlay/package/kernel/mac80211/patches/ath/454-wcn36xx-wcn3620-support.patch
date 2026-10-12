@@ -16,9 +16,9 @@ Signed-off-by: Stephan Gerhold <stephan@gerhold.net>
  drivers/net/wireless/ath/wcn36xx/txrx.c |  7 ++++++-
  3 files changed, 50 insertions(+), 4 deletions(-)
 
---- a/drivers/net/wireless/ath/wcn36xx/main.c
-+++ b/drivers/net/wireless/ath/wcn36xx/main.c
-@@ -1428,6 +1428,11 @@ static int wcn36xx_init_ieee80211(struct
+--- a/drivers/net/wireless/ath/wcn36xx/main.c	2026-10-09 04:50:03.740141063 +0545
++++ b/drivers/net/wireless/ath/wcn36xx/main.c	2026-10-12 00:00:00.000000000 +0545
+@@ -1491,6 +1491,11 @@ static int wcn36xx_init_ieee80211(struct
  	ieee80211_hw_set(wcn->hw, TIMING_BEACON_ONLY);
  	ieee80211_hw_set(wcn->hw, AMPDU_AGGREGATION);
  	ieee80211_hw_set(wcn->hw, SUPPORTS_PS);
@@ -30,8 +30,8 @@ Signed-off-by: Stephan Gerhold <stephan@gerhold.net>
  	ieee80211_hw_set(wcn->hw, SIGNAL_DBM);
  	ieee80211_hw_set(wcn->hw, HAS_RATE_CONTROL);
  	ieee80211_hw_set(wcn->hw, SINGLE_SCAN_ON_ALL_BANDS);
---- a/drivers/net/wireless/ath/wcn36xx/smd.c
-+++ b/drivers/net/wireless/ath/wcn36xx/smd.c
+--- a/drivers/net/wireless/ath/wcn36xx/smd.c	2026-10-09 05:13:41.320590481 +0545
++++ b/drivers/net/wireless/ath/wcn36xx/smd.c	2026-10-12 00:00:00.000000000 +0545
 @@ -120,6 +120,38 @@ static struct wcn36xx_cfg_val wcn3680_cf
  	WCN36XX_CFG_VAL(FRAME_TRANS_ENABLED, 0),
  };
@@ -103,8 +103,8 @@ Signed-off-by: Stephan Gerhold <stephan@gerhold.net>
  
  	candidate = (struct wcn36xx_hal_trigger_ba_rsp_candidate *)(buf + sizeof(*rsp));
  
---- a/drivers/net/wireless/ath/wcn36xx/txrx.c
-+++ b/drivers/net/wireless/ath/wcn36xx/txrx.c
+--- a/drivers/net/wireless/ath/wcn36xx/txrx.c	2026-05-03 04:46:05.000000000 +0545
++++ b/drivers/net/wireless/ath/wcn36xx/txrx.c	2026-10-12 00:00:00.000000000 +0545
 @@ -367,7 +367,12 @@ int wcn36xx_rx_skb(struct wcn36xx *wcn,
  		 */
  		u8 hwch = (bd->reserved0 << 4) + bd->rx_ch;
