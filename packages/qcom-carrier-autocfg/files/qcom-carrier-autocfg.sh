@@ -155,12 +155,15 @@ provision_network() {
 	cur_preferred=$(uci -q get network.modem.preferredmode || echo "")
 
 	local target_allowed target_preferred
-	if [ "$is_jio" = "1" ]; then
+	if [ -n "$cur_allowed" ]; then
+		# Respect user network configuration from LuCI (/etc/config/network)
+		target_allowed="$cur_allowed"
+		target_preferred="$cur_preferred"
+	elif [ "$is_jio" = "1" ]; then
 		target_allowed="4g"
 		target_preferred=""
 	else
-		# Non-Jio carriers: 4G preferred with 3G/2G fallback
-		target_allowed="3g|4g"
+		target_allowed="any"
 		target_preferred="4g"
 	fi
 
@@ -464,7 +467,8 @@ while true; do
 				[ -z "$QMI_DEV" ] && [ -e /dev/wwan0qmi0 ] && QMI_DEV="/dev/wwan0qmi0"
 				if [ -n "$QMI_DEV" ] && [ -e "$QMI_DEV" ]; then
 					log "SIM missing or modem failed in dual-slot baseband. Activating USIM Slot 1 on $QMI_DEV..."
-					qmicli -p -d "$QMI_DEV" --uim-change-provisioning-session="slot=1,activate=yes,session-type=primary-gw-provisioning,aid=A0000000871002F230FF018907020000" >/dev/null 2>&1 || true
+					# Ensure USIM physical slot 1 is provisioned dynamically (works for all carriers)
+					qmicli -p -d "$QMI_DEV" --uim-change-provisioning-session="slot=1,activate=yes,session-type=primary-gw-provisioning" >/dev/null 2>&1 || true
 					sleep 2
 					mmcli -m "$MODEM_PATH" -e >/dev/null 2>&1 || true
 				fi
