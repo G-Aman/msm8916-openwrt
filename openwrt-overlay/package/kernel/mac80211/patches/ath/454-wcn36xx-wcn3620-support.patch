@@ -11,22 +11,20 @@ Addresses WCN3620 2.4 GHz Wi-Fi chip incompatibilities on Qualcomm MSM8916:
 Signed-off-by: Andy Green <andy.green@linaro.org>
 Signed-off-by: Stephan Gerhold <stephan@gerhold.net>
 ---
- drivers/net/wireless/ath/wcn36xx/main.c |  5 +++++
- drivers/net/wireless/ath/wcn36xx/smd.c  | 42 +++++++++++++++++++++++++++++++++++++++---
+ drivers/net/wireless/ath/wcn36xx/main.c |  4 ++--
+ drivers/net/wireless/ath/wcn36xx/smd.c  | 42 ++++++++++++++++++++++++++++++++++++++++---
  drivers/net/wireless/ath/wcn36xx/txrx.c |  7 ++++++-
- 3 files changed, 50 insertions(+), 4 deletions(-)
+ 3 files changed, 49 insertions(+), 4 deletions(-)
 
 --- a/drivers/net/wireless/ath/wcn36xx/main.c	2026-10-09 04:50:03.740141063 +0545
 +++ b/drivers/net/wireless/ath/wcn36xx/main.c	2026-10-12 00:00:00.000000000 +0545
-@@ -1487,6 +1487,11 @@ static int wcn36xx_init_ieee80211(struct
+@@ -1487,6 +1487,8 @@ static int wcn36xx_init_ieee80211(struct
  	ieee80211_hw_set(wcn->hw, TIMING_BEACON_ONLY);
  	ieee80211_hw_set(wcn->hw, AMPDU_AGGREGATION);
- 	ieee80211_hw_set(wcn->hw, SUPPORTS_PS);
-+
+-	ieee80211_hw_set(wcn->hw, SUPPORTS_PS);
 +	/* WCN3620 firmware power saving is unstable and triggers BMPS timeout */
-+	if (wcn->rf_id == RF_IRIS_WCN3620)
-+		ieee80211_hw_clear(wcn->hw, SUPPORTS_PS);
-+
++	if (wcn->rf_id != RF_IRIS_WCN3620)
++		ieee80211_hw_set(wcn->hw, SUPPORTS_PS);
  	ieee80211_hw_set(wcn->hw, SIGNAL_DBM);
  	ieee80211_hw_set(wcn->hw, HAS_RATE_CONTROL);
  	ieee80211_hw_set(wcn->hw, SINGLE_SCAN_ON_ALL_BANDS);
