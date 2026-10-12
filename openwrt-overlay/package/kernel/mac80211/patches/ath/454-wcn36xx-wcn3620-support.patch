@@ -18,7 +18,7 @@ Signed-off-by: Stephan Gerhold <stephan@gerhold.net>
 
 --- a/drivers/net/wireless/ath/wcn36xx/main.c	2026-10-09 04:50:03.740141063 +0545
 +++ b/drivers/net/wireless/ath/wcn36xx/main.c	2026-10-12 00:00:00.000000000 +0545
-@@ -1491,6 +1491,11 @@ static int wcn36xx_init_ieee80211(struct
+@@ -1487,6 +1487,11 @@ static int wcn36xx_init_ieee80211(struct
  	ieee80211_hw_set(wcn->hw, TIMING_BEACON_ONLY);
  	ieee80211_hw_set(wcn->hw, AMPDU_AGGREGATION);
  	ieee80211_hw_set(wcn->hw, SUPPORTS_PS);
@@ -32,10 +32,11 @@ Signed-off-by: Stephan Gerhold <stephan@gerhold.net>
  	ieee80211_hw_set(wcn->hw, SINGLE_SCAN_ON_ALL_BANDS);
 --- a/drivers/net/wireless/ath/wcn36xx/smd.c	2026-10-09 05:13:41.320590481 +0545
 +++ b/drivers/net/wireless/ath/wcn36xx/smd.c	2026-10-12 00:00:00.000000000 +0545
-@@ -120,6 +120,38 @@ static struct wcn36xx_cfg_val wcn3680_cf
- 	WCN36XX_CFG_VAL(FRAME_TRANS_ENABLED, 0),
+@@ -178,6 +178,41 @@ static struct wcn36xx_cfg_val wcn3680_cf
+ 	WCN36XX_CFG_VAL(TRIGGER_NULLFRAME_BEFORE_HB, 0),
+ 	WCN36XX_CFG_VAL(ENABLE_POWERSAVE_OFFLOAD, 0),
  };
- 
++
 +static struct wcn36xx_cfg_val wcn3620_cfg_vals[] = {
 +	WCN36XX_CFG_VAL(CURRENT_TX_ANTENNA, 1),
 +	WCN36XX_CFG_VAL(CURRENT_RX_ANTENNA, 1),
@@ -70,11 +71,10 @@ Signed-off-by: Stephan Gerhold <stephan@gerhold.net>
 +	WCN36XX_CFG_VAL(CFP_MAX_DURATION, 30000),
 +	WCN36XX_CFG_VAL(FRAME_TRANS_ENABLED, 0),
 +};
-+
- int wcn36xx_smd_open(struct wcn36xx *wcn)
+ 
+ static int put_cfg_tlv_u32(struct wcn36xx *wcn, size_t *len, u32 id, u32 value)
  {
- 	int ret;
-@@ -634,6 +666,9 @@ int wcn36xx_smd_start(struct wcn36xx *wc
+@@ -632,6 +667,9 @@ int wcn36xx_smd_start(struct wcn36xx *wc
  	if (wcn->rf_id == RF_IRIS_WCN3680) {
  		cfg_vals = wcn3680_cfg_vals;
  		cfg_elements = ARRAY_SIZE(wcn3680_cfg_vals);
@@ -84,7 +84,7 @@ Signed-off-by: Stephan Gerhold <stephan@gerhold.net>
  	} else {
  		cfg_vals = wcn36xx_cfg_vals;
  		cfg_elements = ARRAY_SIZE(wcn36xx_cfg_vals);
-@@ -2440,7 +2475,8 @@ int wcn36xx_smd_feature_caps_exchange(st
+@@ -2440,7 +2478,8 @@ int wcn36xx_smd_feature_caps_exchange(st
  	mutex_lock(&wcn->hal_mutex);
  	INIT_HAL_MSG(msg_body, WCN36XX_HAL_FEATURE_CAPS_EXCHANGE_REQ);
  
@@ -94,7 +94,7 @@ Signed-off-by: Stephan Gerhold <stephan@gerhold.net>
  	if (wcn->rf_id == RF_IRIS_WCN3680) {
  		wcn36xx_firmware_set_feat_caps(msg_body.feat_caps, DOT11AC);
  		wcn36xx_firmware_set_feat_caps(msg_body.feat_caps, WLAN_CH144);
-@@ -2656,7 +2692,7 @@ static int wcn36xx_smd_trigger_ba_rsp(vo
+@@ -2657,7 +2696,7 @@ static int wcn36xx_smd_trigger_ba_rsp(vo
  	rsp = buf;
  
  	if (rsp->candidate_cnt < 1)
@@ -105,7 +105,7 @@ Signed-off-by: Stephan Gerhold <stephan@gerhold.net>
  
 --- a/drivers/net/wireless/ath/wcn36xx/txrx.c	2026-05-03 04:46:05.000000000 +0545
 +++ b/drivers/net/wireless/ath/wcn36xx/txrx.c	2026-10-12 00:00:00.000000000 +0545
-@@ -367,7 +367,12 @@ int wcn36xx_rx_skb(struct wcn36xx *wcn,
+@@ -367,7 +367,11 @@ int wcn36xx_rx_skb(struct wcn36xx *wcn,
  		 */
  		u8 hwch = (bd->reserved0 << 4) + bd->rx_ch;
  
