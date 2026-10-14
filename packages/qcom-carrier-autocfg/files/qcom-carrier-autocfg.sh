@@ -445,6 +445,22 @@ connect_bearer() {
 
 log "Started MSM8916 SIM Carrier Auto-Provisioning Engine"
 
+# Early slot 1 provisioning before ModemManager probes
+for _i in $(seq 1 15); do
+	[ -e /dev/wwan0qmi0 ] && break
+	sleep 1
+done
+if [ -e /dev/wwan0qmi0 ]; then
+	_CSTATUS=$(qmicli -p -d /dev/wwan0qmi0 --uim-get-card-status 2>/dev/null)
+	if ! echo "$_CSTATUS" | grep -q "Primary GW:.*slot '1'"; then
+		_AID=$(echo "$_CSTATUS" | awk '/Application type:.*usim/ {found=1; next} found && /Application ID:/ {getline; gsub(/[ : \t]/, ""); print; exit}')
+		if [ -n "$_AID" ]; then
+			log "Pre-activating USIM Slot 1 with AID $_AID..."
+			qmicli -p -d /dev/wwan0qmi0 --uim-change-provisioning-session="slot=1,activate=yes,session-type=primary-gw-provisioning,aid=$_AID" >/dev/null 2>&1 || true
+		fi
+	fi
+fi
+
 INITIAL_BOOT_PROVISION=1
 LAST_OPERATOR_CODE=""
 LAST_IMSI=""
@@ -461,16 +477,23 @@ while true; do
 
 		# If SIM is missing or unprovisioned, ensure USIM Slot 1 is active (fixes single-slot dongles defaulting to slot 2)
 		if [ -z "$SIM_IDX" ]; then
-			M_STATE=$(echo "$MODEM_KV" | awk -F': ' '/modem.generic.state/ {print $2}' | tr -d ' \r\n')
+			M_STATE=$(echo "$MODEM_KV" | awk -F': ' '$1 == "modem.generic.state" {print $2}' | tr -d ' \r\n')
 			if [ "$M_STATE" = "failed" ] || [ "$M_STATE" = "unknown" ] || [ -z "$M_STATE" ]; then
 				QMI_DEV=$(echo "$MODEM_KV" | awk -F': ' '/modem.generic.ports.value.*qmi/ {print $2}' | head -n 1 | awk '{print $1}')
+				[ -z "$QMI_DEV" ] && [ -e /dev/wwan0qmi0 ] && QMI_DEV="/dev/wwan0qmi0"
+				[ -n "$QMI_DEV" ] && [ "${QMI_DEV#/dev/}" = "$QMI_DEV" ] && QMI_DEV="/dev/$QMI_DEV"
 				[ -z "$QMI_DEV" ] && [ -e /dev/wwan0qmi0 ] && QMI_DEV="/dev/wwan0qmi0"
 				if [ -n "$QMI_DEV" ] && [ -e "$QMI_DEV" ]; then
 					log "SIM missing or modem failed in dual-slot baseband. Activating USIM Slot 1 on $QMI_DEV..."
 					# Ensure USIM physical slot 1 is provisioned dynamically (works for all carriers)
-					qmicli -p -d "$QMI_DEV" --uim-change-provisioning-session="slot=1,activate=yes,session-type=primary-gw-provisioning" >/dev/null 2>&1 || true
+					USIM_AID=$(qmicli -p -d "$QMI_DEV" --uim-get-card-status 2>/dev/null | awk '/Application type:.*usim/ {found=1; next} found && /Application ID:/ {getline; gsub(/[ : \t]/, ""); print; exit}')
+					if [ -n "$USIM_AID" ]; then
+						qmicli -p -d "$QMI_DEV" --uim-change-provisioning-session="slot=1,activate=yes,session-type=primary-gw-provisioning,aid=$USIM_AID" >/dev/null 2>&1 || true
+					else
+						qmicli -p -d "$QMI_DEV" --uim-change-provisioning-session="slot=1,activate=yes,session-type=primary-gw-provisioning" >/dev/null 2>&1 || true
+					fi
 					sleep 2
-					mmcli -m "$MODEM_PATH" -e >/dev/null 2>&1 || true
+					/etc/init.d/modemmanager restart >/dev/null 2>&1 || true
 				fi
 			fi
 		fi
