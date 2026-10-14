@@ -1,6 +1,6 @@
 --- /dev/null
 +++ b/arch/arm64/boot/dts/qcom/msm8916-generic-uf02.dts
-@@ -0,0 +1,63 @@
+@@ -0,0 +1,78 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +
 +/dts-v1/;
@@ -54,13 +54,28 @@
 +};
 +
 +&gpio_leds_default {
-+	pins = "gpio6", "gpio9", "gpio10";
++	pins = "gpio6", "gpio9", "gpio10", "gpio36", "gpio71", "gpio72", "gpio73";
++};
++
++&pm8916_rpm_regulators {
++	pm8916_l9: l9 {
++		regulator-min-microvolt = <3300000>;
++		regulator-max-microvolt = <3300000>;
++	};
 +};
 +
 +&wcnss {
 +	status = "okay";
++	vddpx-supply = <&pm8916_l7>;
 +};
 +
 +&wcnss_iris {
 +	compatible = "qcom,wcn3620";
++	status = "okay";
++
++	/* Internal WCN3620 2.4GHz RF Power Amplifier supplies */
++	vddxo-supply = <&pm8916_l7>;
++	vddrfa-supply = <&pm8916_s3>;
++	vddpa-supply = <&pm8916_l9>;
++	vdddig-supply = <&pm8916_l5>;
 +};
