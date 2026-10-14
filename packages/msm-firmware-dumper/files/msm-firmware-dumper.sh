@@ -113,9 +113,8 @@ for p in "$MNT/persist/WCNSS_qcom_wlan_nv.bin" "$MNT/persist/wlan/prima/WCNSS_qc
          "$MNT/modem/image/wlan/prima/WCNSS_qcom_wlan_nv.bin" "$MNT/modem/IMAGE/WLAN/PRIMA/WCNSS_QCOM_WLAN_NV.BIN" \
          "$MNT/modem/wlan/prima/WCNSS_qcom_wlan_nv.bin"; do
   if [ -f "$p" ]; then
-    # Trim raw 29816-byte persist dump to 29812 bytes (stripping 4 trailing padding bytes)
-    # to match Hexagon DSP buffer size and avoid req 55 watchdog timeout.
-    head -c 29812 "$p" > "$FW/wlan/prima/WCNSS_qcom_wlan_nv.bin" && log "extracted trimmed (29812B) WCNSS_qcom_wlan_nv.bin"
+    # Keep raw 29816-byte persist dump (wcn36xx driver automatically subtracts 4-byte header)
+    head -c 29816 "$p" > "$FW/wlan/prima/WCNSS_qcom_wlan_nv.bin" && log "extracted full (29816B) WCNSS_qcom_wlan_nv.bin"
     break
   fi
 done

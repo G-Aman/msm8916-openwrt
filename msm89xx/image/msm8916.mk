@@ -49,7 +49,7 @@ define Device/generic-uf02
 	$(Device/msm8916)
 	DEVICE_VENDOR := Generic
 	DEVICE_MODEL := UF02 (250605 V0S)
-	SUPPORTED_DEVICES := uf02,250605v0s
+	SUPPORTED_DEVICES := uf02,250605v0s tukzer,wm3311-sp971v4
 	FILESYSTEMS := squashfs
 	DEVICE_PACKAGES := wpad-basic-wolfssl rmtfs uci-usb-gadget \
 		block-mount f2fs-tools tar \

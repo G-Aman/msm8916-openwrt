@@ -1,9 +1,9 @@
 --- a/arch/arm64/boot/dts/qcom/msm8916-generic-uf02.dts
 +++ b/arch/arm64/boot/dts/qcom/msm8916-generic-uf02.dts
-@@ -61,3 +61,18 @@
- &wcnss_iris {
- 	compatible = "qcom,wcn3620";
- };
+@@ -80,3 +80,18 @@
+  	vddpa-supply = <&pm8916_l9>;
+  	vdddig-supply = <&pm8916_l5>;
+  };
 +
 +/*
 + * Keep the modem's A2 (BAM) power domain alive on the UF02 board.
