@@ -1,6 +1,6 @@
 --- /dev/null
 +++ b/arch/arm64/boot/dts/qcom/msm8916-generic-uf02.dts
-@@ -0,0 +1,78 @@
+@@ -0,0 +1,87 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +
 +/dts-v1/;
@@ -79,4 +79,8 @@
 +	vddrfa-supply = <&pm8916_s3>;
 +	vddpa-supply = <&pm8916_l9>;
 +	vdddig-supply = <&pm8916_l5>;
++};
++
++&bam_dmux {
++	qcom,a2-pin;
 +};
