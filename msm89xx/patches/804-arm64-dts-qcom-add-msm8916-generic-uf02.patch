@@ -1,6 +1,6 @@
 --- /dev/null
 +++ b/arch/arm64/boot/dts/qcom/msm8916-generic-uf02.dts
-@@ -0,0 +1,83 @@
+@@ -0,0 +1,93 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +
 +/dts-v1/;
@@ -63,6 +63,16 @@
 +		regulator-max-microvolt = <3300000>;
 +		regulator-always-on;
 +	};
++};
++
++&mpss_mem {
++	reg = <0x0 0x86800000 0x0 0x4e00000>;
++	status = "okay";
++};
++
++&wcnss_mem {
++	reg = <0x0 0x8b600000 0x0 0x600000>;
++	status = "okay";
 +};
 +
 +&wcnss {

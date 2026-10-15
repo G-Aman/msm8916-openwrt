@@ -1,0 +1,45 @@
+--- a/drivers/remoteproc/qcom_wcnss.c	2026-10-15 09:38:58.707061473 +0530
++++ b/drivers/remoteproc/qcom_wcnss.c	2026-10-15 09:40:10.038831715 +0530
+@@ -274,7 +274,14 @@
+ 		goto disable_iris;
+ 	}
+ 
+-	ret = 0;
++	/*
++	 * On MSM8916 Pronto platforms, the WCNSS DSP relies on the AP's
++	 * XO clock and power votes remaining active. Disabling Iris and
++	 * regulators immediately upon start cuts the reference clock,
++	 * causing Hexagon task starvation (dog.c:1676) after ~60s.
++	 */
++	mutex_unlock(&wcnss->iris_lock);
++	return 0;
+ 
+ disable_iris:
+ 	qcom_iris_disable(wcnss->iris);
+@@ -294,7 +301,7 @@
+ static int wcnss_stop(struct rproc *rproc)
+ {
+ 	struct qcom_wcnss *wcnss = rproc->priv;
+-	int ret;
++	int ret, i;
+ 
+ 	if (wcnss->state) {
+ 		qcom_smem_state_update_bits(wcnss->state,
+@@ -315,6 +322,17 @@
+ 	if (ret)
+ 		dev_err(wcnss->dev, "failed to shutdown: %d\n", ret);
+ 
++	mutex_lock(&wcnss->iris_lock);
++	qcom_iris_disable(wcnss->iris);
++	mutex_unlock(&wcnss->iris_lock);
++
++	regulator_bulk_disable(wcnss->num_vregs, wcnss->vregs);
++
++	for (i = 0; i < wcnss->num_pds; i++) {
++		pm_runtime_put(wcnss->pds[i]);
++		dev_pm_genpd_set_performance_state(wcnss->pds[i], 0);
++	}
++
+ 	return ret;
+ }
+ 

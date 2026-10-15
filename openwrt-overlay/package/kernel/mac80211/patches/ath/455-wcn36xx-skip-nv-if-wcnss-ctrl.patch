@@ -1,0 +1,21 @@
+--- a/drivers/net/wireless/ath/wcn36xx/main.c	2026-10-15 09:40:16.060812318 +0530
++++ b/drivers/net/wireless/ath/wcn36xx/main.c	2026-10-15 09:40:59.860671240 +0530
+@@ -231,10 +231,16 @@
+ 		goto out_free_dxe_pool;
+ 	}
+ 
++	/*
++	 * On MSM8916 / Pronto v2 & v3 platforms, NV calibration is already
++	 * downloaded via drivers/soc/qcom/wcnss_ctrl.c over the WCNSS_CTRL SMD
++	 * channel during early remoteproc boot. Sending SMD 55 a second time
++	 * causes MEM_FAIL (err=5) or watchdog task starvation (dog.c:1676).
++	 */
+ 	ret = wcn36xx_smd_load_nv(wcn);
+ 	if (ret) {
+-		wcn36xx_err("Failed to push NV to chip\n");
+-		goto out_free_dxe_ctl;
++		wcn36xx_warn("SMD NV download returned %d, continuing since NV is loaded via wcnss_ctrl
++", ret);
+ 	}
+ 
+ 	ret = wcn36xx_smd_start(wcn);
