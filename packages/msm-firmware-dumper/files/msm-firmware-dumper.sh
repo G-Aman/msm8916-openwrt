@@ -113,15 +113,18 @@ for p in "$MNT/persist/WCNSS_qcom_wlan_nv.bin" "$MNT/persist/wlan/prima/WCNSS_qc
          "$MNT/modem/image/wlan/prima/WCNSS_qcom_wlan_nv.bin" "$MNT/modem/IMAGE/WLAN/PRIMA/WCNSS_QCOM_WLAN_NV.BIN" \
          "$MNT/modem/wlan/prima/WCNSS_qcom_wlan_nv.bin"; do
   if [ -f "$p" ]; then
-    # Downstream wcnss_ctrl and upstream qcom_wcnss_ctrl require the 29812-byte payload
-    # (stripping the 4-byte validity header: nv->data + 4, nv->size - 4)
-    # If the source file has the 4-byte header (size >= 29816), strip it:
-    file_sz=$(wc -c < "$p")
-    if [ "$file_sz" -ge 29816 ]; then
-      tail -c +5 "$p" | head -c 29812 > "$FW/wlan/prima/WCNSS_qcom_wlan_nv.bin" && log "extracted calibrated (29812B) WCNSS_qcom_wlan_nv.bin"
-    else
-      head -c 29812 "$p" > "$FW/wlan/prima/WCNSS_qcom_wlan_nv.bin" && log "copied (29812B) WCNSS_qcom_wlan_nv.bin"
-    fi
+    # Keep raw 29816-byte factory calibration binary verbatim.
+    # Both wcn36xx and wcnss_ctrl strip the 4-byte validity header (+4, -4)
+    # delivering exactly 29812B (0x7474) to the WCNSS coprocessor.
+    cp -af "$p" "$FW/wlan/prima/WCNSS_qcom_wlan_nv.bin" && log "copied factory WCNSS_qcom_wlan_nv.bin ($(wc -c < "$p")B)"
+    break
+  fi
+done
+
+# Bluetooth NV calibration (.bt_nv.bin) from persist
+for bt_p in "$MNT/persist/.bt_nv.bin" "$MNT/persist/wlan/prima/.bt_nv.bin"; do
+  if [ -f "$bt_p" ]; then
+    cp -af "$bt_p" "$FW/.bt_nv.bin" && log "copied Bluetooth calibration .bt_nv.bin"
     break
   fi
 done

@@ -1,0 +1,20 @@
+--- a/drivers/soc/qcom/wcnss_ctrl.c
++++ b/drivers/soc/qcom/wcnss_ctrl.c
+@@ -224,6 +224,17 @@ static int wcnss_download_nv(struct wcns
+ 	data = fw->data;
+ 	left = fw->size;
+ 
++	/*
++	 * On MSM8916 / Pronto, the factory NV binary contains a 4-byte header
++	 * that the WCNSS coprocessor rewrites in place with opcode 0x7fff0037
++	 * (req 55). The actual calibration payload starts at offset 4 and must
++	 * be exactly 29812 (0x7474) bytes. Strip the 4-byte header before upload.
++	 */
++	if (fw->size >= 29816) {
++		data = fw->data + 4;
++		left = fw->size - 4;
++	}
++
+ 	req->hdr.type = WCNSS_DOWNLOAD_NV_REQ;
+ 	req->hdr.len = sizeof(*req) + NV_FRAGMENT_SIZE;
+ 
