@@ -312,3 +312,17 @@ CONFIG_PACKAGE_kmod-btmrvl=m
 CONFIG_PACKAGE_kmod-btmtkuart=m
 CONFIG_PACKAGE_kmod-btsdio=m
 CONFIG_PACKAGE_luci-app-bluetooth=y
+
+
+# Optional virtual networking - package feed only
+CONFIG_PACKAGE_kmod-ipvlan=m
+CONFIG_PACKAGE_kmod-ifb=m
+CONFIG_PACKAGE_kmod-vrf=m
+CONFIG_PACKAGE_kmod-dummy=m
+CONFIG_PACKAGE_kmod-macvlan=y
+CONFIG_IP_ADVANCED_ROUTER=y
+CONFIG_IP_MULTIPLE_TABLES=y
+
+# Optional uSpot support - package feed only
+CONFIG_PACKAGE_kmod-sched-core=m
+CONFIG_PACKAGE_kmod-sched-bpf=m
