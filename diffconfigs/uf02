@@ -649,5 +649,6 @@ CONFIG_PACKAGE_kmod-dummy=m
 CONFIG_PACKAGE_kmod-sched-core=m
 CONFIG_PACKAGE_kmod-sched-bpf=m
 
-CONFIG_IP_ADVANCED_ROUTER=y
-CONFIG_IP_MULTIPLE_TABLES=y
+# Qdisc shaping - per-client bandwidth control (Cake/HTB)
+CONFIG_PACKAGE_kmod-sch-cake=y
+CONFIG_PACKAGE_kmod-sched=y
