@@ -320,11 +320,11 @@ CONFIG_PACKAGE_kmod-ifb=m
 CONFIG_PACKAGE_kmod-vrf=m
 CONFIG_PACKAGE_kmod-dummy=m
 CONFIG_PACKAGE_kmod-macvlan=y
-CONFIG_IP_ADVANCED_ROUTER=y
-CONFIG_IP_MULTIPLE_TABLES=y
 
 # Optional uSpot support - package feed only
 CONFIG_PACKAGE_kmod-sched-core=m
 CONFIG_PACKAGE_kmod-sched-bpf=m
+CONFIG_PACKAGE_kmod-sch-cake=y
+CONFIG_PACKAGE_kmod-sched=y
 CONFIG_PACKAGE_kmod-wcn36xx=y
 CONFIG_PACKAGE_wpad=y
