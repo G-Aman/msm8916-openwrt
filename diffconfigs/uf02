@@ -326,3 +326,5 @@ CONFIG_IP_MULTIPLE_TABLES=y
 # Optional uSpot support - package feed only
 CONFIG_PACKAGE_kmod-sched-core=m
 CONFIG_PACKAGE_kmod-sched-bpf=m
+CONFIG_PACKAGE_kmod-wcn36xx=y
+CONFIG_PACKAGE_wpad=y
